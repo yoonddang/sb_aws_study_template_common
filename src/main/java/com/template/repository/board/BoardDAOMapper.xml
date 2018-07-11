@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.template.repository.board.BoardDAO">
+
+    <resultMap id="BoardResult" type="com.template.common.model.board.BoardVO" >
+        <result property="board_idx" column="board_idx"/>
+        <result property="category" column="category"/>
+        <result property="title" column="title"/>
+        <result property="writer" column="writer"/>
+        <result property="content" column="content"/>
+        <result property="reg_ymdt" column="reg_ymdt"/>
+        <result property="mod_ymdt" column="mod_ymdt"/>
+        <result property="read_cnt" column="read_cnt"/>
+        <result property="delete_flag" column="delete_flag"/>
+        <result property="filecnt" column="filecnt"/>
+        <result property="replycnt" column="replycnt"/>
+
+        <result property="album_name" column="album_name"/>
+        <result property="distribute" column="distribute"/>
+        <result property="sale_date" column="sale_date"/>
+        <result property="album_idx" column="album_idx"/>
+
+    </resultMap>
+
+    <sql id="includeBoard">
+        WHERE delete_flag='N'
+        <if test="searchKeyword!=null and searchKeyword!='' and searchType!=''">
+            <foreach item="item" index="index" collection="searchTypeArr" separator=" OR " open="AND (" close=")">
+                ${item} LIKE CONCAT('%', #{searchKeyword},'%' )
+            </foreach>
+        </if>
+    </sql>
+
+    <select id="selectBoardCount" resultType="Integer" parameterType="com.template.common.model.board.SearchVO">
+        SELECT COUNT(*)
+        FROM ht_board
+        <include refid="includeBoard"/>
+    </select>
+
+    <!--<select id="selectBoardList" resultType="com.template.common.model.board.BoardVO" parameterType="com.template.common.model.board.RankParamVO">
+        SELECT board_idx, title, writer, DATE_FORMAT(reg_ymdt,'%Y-%m-%d') reg_ymdt, read_cnt
+        , (SELECT COUNT(*) FROM ht_board_file WHERE board_idx=TB.board_idx) FILECNT
+        FROM ht_board TB
+        <include refid="includeBoard"/>
+        ORDER BY board_idx DESC
+        LIMIT ${rowStart-1}, 10
+    </select>-->
+
+    <select id="selectBoardList" resultMap="BoardResult" parameterType="com.template.common.model.board.SearchVO">
+        SELECT board_idx, category, title, writer, DATE_FORMAT(reg_ymdt,'%Y-%m-%d') reg_ymdt, read_cnt
+        , (SELECT COUNT(*) FROM ht_board_file WHERE board_idx=TB.board_idx) FILECNT
+        FROM ht_board TB
+        WHERE category = ${category} AND delete_flag = 'N'
+        ORDER BY board_idx DESC
+        LIMIT ${first}, ${length}
+    </select>
+
+    <insert id="insertBoard" parameterType="com.template.common.model.board.BoardVO" >
+        INSERT INTO ht_board(category, title, writer, content, reg_ymdt, read_cnt, delete_flag)
+        VALUES (#{category}, #{title}, #{writer}, #{content}, NOW(), 0, 'N' )
+        <selectKey resultType="String" keyProperty="board_idx" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="updateBoard" parameterType="com.template.common.model.board.BoardVO">
+        UPDATE ht_board
+        SET title=#{title}
+        , writer=#{writer}
+        , content=#{content}
+        WHERE delete_flag='N'
+        AND board_idx=#{board_idx}
+    </update>
+
+    <select id="selectBoardOne" parameterType="String" resultMap="BoardResult">
+        SELECT board_idx, category, title, writer, content, read_cnt, DATE_FORMAT(reg_ymdt,'%Y-%m-%d') reg_ymdt
+        FROM ht_board
+        WHERE delete_flag='N'
+        AND board_idx = #{boardIdx}
+    </select>
+
+    <update id="updateBoardRead" parameterType="String">
+        UPDATE ht_board
+        SET read_cnt = read_cnt + 1
+        WHERE board_idx=#{boardIdx}
+    </update>
+
+    <delete id="deleteBoardOne" parameterType="String">
+        UPDATE ht_board
+        SET delete_flag='Y'
+        WHERE board_idx=#{boardIdx}
+    </delete>
+
+
+
+
+    <!-- =============================================================================== -->
+    <select id="selectBoardFileList" resultType="com.template.common.model.board.FileVO" parameterType="String">
+        SELECT file_idx, file_name, real_name, file_size
+        FROM ht_board_file
+        WHERE board_idx=#{boardIdx}
+        ORDER BY file_idx DESC
+    </select>
+
+    <insert id="insertBoardFile" parameterType="com.template.common.model.board.FileVO" >
+        INSERT INTO ht_board_file (board_idx, file_name, real_name, file_size)
+        VALUES (#{parentPK}, #{file_name}, #{real_name}, #{file_size})
+    </insert>
+    <delete id="deleteBoardFile" parameterType="hashmap">
+        DELETE
+        FROM ht_board_file
+        WHERE file_idx IN (
+        <foreach item="item" index="index" collection="file_idx" separator=",">
+            ${item}
+        </foreach>
+        )
+    </delete>
+
+
+    <!-- =============================================================================== -->
+    <select id="selectNewAlbum" resultType="com.template.common.model.board.BoardVO" >
+        <![CDATA[
+        SELECT *
+        FROM
+            ht_board_music_info
+        WHERE
+            sale_date <= curdate() and sale_date >= adddate(curdate(),-7)
+        ORDER BY
+            sale_date desc
+        limit ${page_first_num}, ${page_last_num};
+        ]]>
+    </select>
+
+    <select id="selectSchedule" resultType="com.template.common.model.board.BoardVO" >
+        <![CDATA[
+        SELECT *
+        FROM
+	        ht_board_music_info
+        WHERE
+	        sale_date >= curdate()
+        ORDER BY
+	        sale_date desc
+        limit ${page_first_num}, ${page_last_num};
+        ]]>
+    </select>
+
+</mapper>

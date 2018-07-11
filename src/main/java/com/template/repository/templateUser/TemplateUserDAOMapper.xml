@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.template.repository.template.ser.TemplateUserDAO">
+
+	<resultMap id=.template.serResultMap" type="com.template.common.model.user.TemplateUser">
+		<result property="userIdx" column="user_idx" />
+		<result property="email" column="email" />
+		<result property="passWord" column="password" />
+		<result property="nickName" column="nickname" />
+		<result property="subeMail" column="subemail" />
+		<result property="phone" column="phone" />
+		<result property="countryIdx" column="country_idx" />
+		<result property="areaIdx" column="area_idx" />
+		<result property="birthDay" column="birthday" />
+		<result property="gender" column="gender" />
+		<result property="state" column="state" />
+		<result property="loginCount" column="login_count" />
+		<result property="lastLoginTime" column="last_login_time" />
+		<result property="createTime" column="create_time" />
+		<result property="updateTime" column="update_time" />
+		<result property="socialId" column="social_id" />
+		<result property="eventKey" column="event_key" />
+		<result property="cookieKey" column="cookie_key" />
+		<result property="cookieLimit" column="cookie_limit" />
+	</resultMap>
+
+	<select id="selectLoginUserDataByEmail" resultType="com.template.common.model.user.TemplateUser">
+		<![CDATA[
+        SELECT u.user_idx as userIdx, u.email, u.password as pass_word,  u.nickname, r.name as role, auth.permit_expire_ymdt as expire_ymdt
+        , if(u.birthday = '0000-00-00','1900-01-01',u.birthday) as birthday, u.gender, u.subemail, u.phone
+		, cty.country_name
+		, u.state, u.login_count, c.coin, u.event_key as eventKey
+		FROM ht_user u
+			LEFT OUTER JOIN ht_authorities auth on u.user_idx = auth.user_idx and auth.permit = 1
+			LEFT OUTER JOIN ht_role r on r.role_idx = auth.role_idx
+			LEFT OUTER JOIN ht_coin c on u.user_idx = c.user_idx
+			LEFT OUTER JOIN ht_country cty on u.country_idx = cty.country_idx
+			LEFT OUTER JOIN ht_area a on u.area_idx = a.area_idx
+		WHERE (auth.permit_expire_ymdt is null or auth.permit_expire_ymdt > now()) and u.email = '${email}'
+        ORDER BY r.role_idx desc limit 1
+        ]]>
+	</select>
+
+	<select id="selectUserDataByEmail" resultType="com.template.common.model.user.TemplateUser">
+		<![CDATA[
+        SELECT if(isnull(u.user_idx),null,u.user_idx) as userIdx, u.email, password as pass_word, group_concat(r.name) as role, u.nickname
+		, if(u.birthday = '0000-00-00','1900-01-01',u.birthday) as birthday, u.gender, u.subemail, u.phone
+		, cty.country_name, group_concat(distinct a.area_do,' ',a.area_sigu) as area
+		, u.state, u.login_count, c.coin, u.event_key as eventKey
+		FROM ht_user u
+			LEFT OUTER JOIN ht_authorities auth on u.user_idx = auth.user_idx
+			LEFT OUTER JOIN ht_role r on r.role_idx = auth.role_idx
+			LEFT OUTER JOIN ht_coin c on u.user_idx = c.user_idx
+			LEFT OUTER JOIN ht_country cty on u.country_idx = cty.country_idx
+			LEFT OUTER JOIN ht_area a on u.area_idx = a.area_idx
+		WHERE u.email = '${email}';
+        ]]>
+	</select>
+
+
+
+
+</mapper>

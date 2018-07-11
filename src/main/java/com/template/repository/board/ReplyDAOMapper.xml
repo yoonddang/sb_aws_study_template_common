@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.template.repository.board.ReplyDAO">
+
+
+
+    <insert id="insertReply" parameterType="com.template.common.model.board.ReplyVO">
+        INSERT INTO ht_reply(board_idx, parent, reorder, depth, writer, content)
+        VALUES (${idx}, ${parent}, ${reorder}, ${depth}, '${email}', '${content}');
+    </insert>
+
+    <select id="selectMaxReorderByIdx" resultType="com.template.common.model.board.ReplyVO">
+        SELECT max(reorder) as reorder
+        FROM ht_reply
+        WHERE board_idx = ${idx};
+    </select>
+
+    <select id="selectReplyList" resultType="com.template.common.model.board.ReplyVO">
+        <![CDATA[
+        SELECT r.board_idx as idx, reply_idx, r.parent, reorder, depth, substr(SUBSTRING_INDEX(writer, '@', 1),1,4) as writer, writer as email, content
+        , DATE_FORMAT(reg_ymdt,'%Y-%m-%d %H:%i') reg_ymdt, ifnull(rd.depth_reply_count, 0) as depth_reply_count
+        FROM ht_reply r
+		LEFT OUTER JOIN (
+
+        SELECT parent, count(reply_idx) as depth_reply_count
+        FROM ht_reply
+        WHERE board_idx = ${idx} and depth = 1
+        GROUP BY parent
+
+        ) rd on rd.parent = r.reply_idx
+        WHERE board_idx = ${idx} and depth = 0 and r.parent = 0 #and reorder <= ${maxReorder}
+        ORDER BY reorder desc
+        limit ${length};
+        ]]>
+    </select>
+
+    <select id="selectReplyListCount" resultType="com.template.common.model.board.ReplyVO">
+        SELECT count(reply_idx) as replyListCount
+        FROM ht_reply
+        WHERE board_idx = ${idx};
+    </select>
+
+    <select id="selectReplyListDepth" resultType="com.template.common.model.board.ReplyVO">
+        SELECT board_idx as idx, reply_idx, parent, reorder, depth, substr(writer,1,4) as writer, writer as email, content, DATE_FORMAT(reg_ymdt,'%Y-%m-%d %H:%i') reg_ymdt
+        FROM ht_reply
+        WHERE depth = 1 and parent = ${parent} and reorder >= ${maxReorder}
+        ORDER BY reorder desc
+        limit ${length};
+    </select>
+
+    <select id="selectReplyListDepthCount" resultType="com.template.common.model.board.ReplyVO">
+        SELECT count(reply_idx) as replyListDepthCount
+        FROM ht_reply
+        WHERE depth = 1 and parent = ${parent};
+    </select>
+
+    <update id="updateReply" parameterType="com.template.common.model.board.ReplyVO">
+        UPDATE ht_reply
+        SET content = '${content}', mod_ymdt = now()
+        WHERE reply_idx = ${reply_idx} and writer = '${email}';
+    </update>
+
+    <update id="lockdownReply">
+        UPDATE ht_reply
+        SET content = '', mod_ymdt = now()
+        WHERE parent = 0 and depth = 0
+	        and reply_idx = ${reply_idx};
+    </update>
+
+    <delete id="deleteReply">
+        DELETE FROM ht_reply
+        WHERE delete_flag = 'Y' and parent = 0 and depth = 0
+	        and reply_idx = ${reply_idx} and writer = '${email}';
+    </delete>
+
+    <update id="updateDeleteFlag">
+        UPDATE ht_reply
+        SET delete_flag = '${delete_flag}'
+        WHERE reply_idx = ${reply_idx};
+    </update>
+
+
+
+
+
+
+
+    <select id="selectBoardReplyList" resultType="com.template.common.model.board.ReplyVO" parameterType="String">
+        SELECT board_idx, reply_idx, writer, delete_flag, content, reg_ymdt, parent, depth, order_no
+        FROM ht_board_reply
+        WHERE board_idx=${board_idx} AND delete_flag='N'
+        ORDER BY order_no
+    </select>
+
+    <insert id="insertBoardReply" parameterType="com.template.common.model.board.ReplyVO" >
+        <selectKey resultType="String" keyProperty="reply_idx" order="BEFORE">
+            SELECT IFNULL(MAX(reply_idx),0)+1 FROM ht_board_reply
+        </selectKey>
+
+        INSERT INTO ht_board_reply(board_idx, reply_idx, writer, delete_flag, content, reg_ymdt, order_no, parent, depth)
+        VALUES (${board_idx}, ${reply_idx}, ${writer}, 'N', ${content}, NOW(), ${order_no},
+        <choose>
+            <when test="parent==null">${reply_idx}, 0</when>
+            <otherwise>${parent}, ${depth}</otherwise>
+        </choose>
+        )
+    </insert>
+
+    <select id="selectBoardReplyParent" resultType="com.template.common.model.board.ReplyVO" parameterType="String">
+        SELECT board_idx, depth+1 depth, order_no
+        FROM ht_board_reply
+        WHERE reply_idx=${parent}
+    </select>
+
+    <update id="updateBoardReplyOrder" parameterType="com.template.common.model.board.ReplyVO">
+        UPDATE ht_board_reply
+        SET order_no = order_no + 1
+        WHERE board_idx=${board_idx} AND order_no>${order_no}
+    </update>
+
+    <select id="selectBoardReplyMaxOrder" resultType="Integer" parameterType="String">
+        SELECT IFNULL(MAX(order_no),0)+1
+        FROM ht_board_reply
+        WHERE board_idx=${board_idx}
+    </select>
+
+    <select id="selectBoardReplyChild" resultType="Integer" parameterType="String">
+        SELECT COUNT(*)
+        FROM ht_board_reply
+        WHERE parent=${parent} AND reply_idx!=${parent} AND delete_flag='N'
+    </select>
+
+    <update id="deleteBoardReply" parameterType="String">
+        UPDATE ht_board_reply
+        SET delete_flag='Y'
+        WHERE reply_idx=${reply_idx}
+    </update>
+
+    <update id="updateBoardReplyOrderDelete" parameterType="com.template.common.model.board.ReplyVO">
+        UPDATE ht_board_reply TBR1
+        INNER JOIN ht_board_reply TBR2 ON TBR2.board_idx=TBR1.board_idx AND TBR1.order_no >TBR2.order_no AND TBR1.delete_flag='N'
+        SET TBR1.order_no = TBR1.order_no - 1
+        WHERE TBR2.reply_idx=${reply_idx}
+    </update>
+
+    <update id="updateBoardReply" parameterType="com.template.common.model.board.ReplyVO">
+        UPDATE ht_board_reply
+        SET content=${content}
+        WHERE reply_idx=${reply_idx}
+    </update>
+
+
+
+
+
+</mapper>
