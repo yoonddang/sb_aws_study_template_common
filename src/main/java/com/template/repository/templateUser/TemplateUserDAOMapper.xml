@@ -2,27 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.template.repository.template.ser.TemplateUserDAO">
 
-	<resultMap id=.template.serResultMap" type="com.template.common.model.user.TemplateUser">
-		<result property="userIdx" column="user_idx" />
-		<result property="email" column="email" />
-		<result property="passWord" column="password" />
-		<result property="nickName" column="nickname" />
-		<result property="subeMail" column="subemail" />
-		<result property="phone" column="phone" />
-		<result property="countryIdx" column="country_idx" />
-		<result property="areaIdx" column="area_idx" />
-		<result property="birthDay" column="birthday" />
-		<result property="gender" column="gender" />
-		<result property="state" column="state" />
-		<result property="loginCount" column="login_count" />
-		<result property="lastLoginTime" column="last_login_time" />
-		<result property="createTime" column="create_time" />
-		<result property="updateTime" column="update_time" />
-		<result property="socialId" column="social_id" />
-		<result property="eventKey" column="event_key" />
-		<result property="cookieKey" column="cookie_key" />
-		<result property="cookieLimit" column="cookie_limit" />
-	</resultMap>
 
 	<select id="selectLoginUserDataByEmail" resultType="com.template.common.model.user.TemplateUser">
 		<![CDATA[

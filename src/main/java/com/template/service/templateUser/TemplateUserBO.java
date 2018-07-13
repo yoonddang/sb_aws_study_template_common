@@ -1,4 +1,4 @@
-package com.template.service.template.ser;
+package com.template.service.templateUser;
 
 import com.template.common.model.user.*;
 import com.template.common.model.common.Code;
